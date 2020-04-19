@@ -187,11 +187,16 @@
 
       },
       saveCourse() {
+        console.log(this.detail);
+        console.log(this.time_value);
       },
       search() {
 
       },
       handleCurrentChange() {
+
+      },
+      handleChange() {
 
       },
       async getCourseList() {
@@ -202,7 +207,7 @@
         })
         this.dataTable = res.data;
       },
-      async getCate() {
+      async getCate() {   //处理课程目录
         let res = await axios.get('/api/categories');
         let {data} = res;
         data = data.map(item => {return {value: item.id, label: item.dec, parent_id: item.parent_id}});
@@ -220,10 +225,8 @@
       },
       async getTeacher() {
         let res = await axios.get('/api/public/teacherList');
-        this.teacher_options = res.data;
-      },
-      handleChange() {
-
+        let data = res.data.map(v => {return {value: v.id, label: v.name + '-' +  v.id}});
+        this.teacher_options = data;
       },
       async getSubCourse(course_id) {
         let res = await axios.get('/api/public/subCourse', {
@@ -231,6 +234,7 @@
         });
         let {data} = res;
         this.sub_course = data;
+        console.log(data);
       }
     },
     components: {
