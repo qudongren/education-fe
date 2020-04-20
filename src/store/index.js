@@ -5,13 +5,17 @@ Vue.use(Vuex);
 
 const store = new Vuex.Store({
     state: {
-
+      userInfo:{}
     },
     mutations: {
-
+      LOGIN(state,userInfo) {
+        state.userInfo = userInfo;
+      },
     },
     actions: {
-
+      login(ctx, userInfo) {
+        ctx.commit('LOGIN', userInfo);
+      },
     }
 });
 

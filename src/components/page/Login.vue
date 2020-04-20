@@ -10,7 +10,7 @@
           <el-container id="login_container_main">
             <el-form :model="loginForm" :rules="rules" ref="loginForm">
               <el-form-item prop="username">
-                <el-input v-model="loginForm.username" placeholder="ID" @change="vp" class="loginInput"></el-input>
+                <el-input v-model="loginForm.id" placeholder="ID" @change="vp" class="loginInput"></el-input>
               </el-form-item>
               <el-form-item prop="password">
                 <el-input placeholder="密码" type="password" v-model="loginForm.password" @keyup.enter.native="submitForm()"  class="loginInput"></el-input>
@@ -27,13 +27,13 @@
   </div>
 </template>
 <script>
-  import qs from 'qs';
+  // import axios from 'axios'
   export default {
     data: function () {
       return {
         errormsg:'',
         loginForm: {
-          username: "",
+          id: "",
           password: ""
         },
         rules: {
@@ -50,8 +50,16 @@
       vp() {
 
       },
-      submitForm(){
-
+      async submitForm(){
+        const resp = await this.$axios.post('/api/public/login', this.loginForm);
+        const value = resp.data;
+        if (value && value.status === 200) {
+          this.$router.push({path: '/'});
+          this.$store.commit('LOGIN', value);
+          sessionStorage.setItem('token',value.token);
+        } else {
+          this.errormsg = value.msg || '登录失败';
+        }
       }
     }
   }

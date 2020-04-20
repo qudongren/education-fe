@@ -12,7 +12,7 @@
         <!--用户名-->
         <el-dropdown class="header_right_user_username" trigger="click" @command=" handleCommand">
           <span class="el-dropdown-link">
-           Hello, admin&nbsp;&nbsp;<i class="el-icon-caret-bottom"></i>
+           Hello, {{username}}&nbsp;&nbsp;<i class="el-icon-caret-bottom"></i>
           </span>
           <el-dropdown-menu slot="dropdown">
             <el-dropdown-item command="loginout" divided>退出登录</el-dropdown-item>
@@ -59,25 +59,12 @@
       // 用户名下拉菜单选择事件
       handleCommand(command) {
         if (command == 'loginout') {
-          const url = this.$rootUrl + "/api/ms/logout";
-
-          const options = {
-            method: 'GET',
-            url: url,
-            data: {}
-          };
-
-          this.$axios(options).then((res) => {
-            let item = res.data.data;
-            if (item.code == 0) {
-              this.$router.push('/login');
-            }
-          })
+          this.$router.push('/login');
         }
       },
     },
     created(){
-
+      this.username = this.$store.state.userInfo.name;
     }
 
   }

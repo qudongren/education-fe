@@ -41,14 +41,25 @@
             :value="item.value">
           </el-option>
         </el-select></p>
-        <p><label>课程时间：</label><el-time-picker
-          is-range
-          v-model="time_value"
-          range-separator="至"
-          start-placeholder="开始时间"
-          end-placeholder="结束时间"
-          placeholder="选择时间范围">
-        </el-time-picker></p>
+        <p><label>课程时间：</label>
+          <el-time-select
+            placeholder="起始时间"
+            v-model="detail.start_time"
+            :picker-options="{
+              start: '08:30',
+              step: '00:30',
+              end: '22:30'}">
+          </el-time-select>
+          至
+          <el-time-select
+            placeholder="结束时间"
+            v-model="detail.end_time"
+            :picker-options="{
+              start: '08:30',
+              step: '00:30',
+              end: '22:30'}">
+          </el-time-select>
+        </p>
         <p><label>课程价格：</label><el-input v-model="detail.price"></el-input></p>
         <p><label>总名额：</label><el-input v-model="detail.total"></el-input></p>
         <p><label>热度值：</label><el-input v-model="detail.hotLevel"></el-input></p>
@@ -56,13 +67,14 @@
         <p class="button_right"><el-button type="primary" style="margin-top: 8px;" @click="saveCourse()">保存</el-button></p>
       </div>
       <div class="detailDialog-body" v-if="type === 'edit'">
-        <label>课次列表</label>
+        <label>课次列表 <el-button size="small" @click="handleAddSubCourse">添加课次</el-button></label>
         <el-table :data="sub_course" style="width: 100%" border class="elTable">
           <el-table-column label="课次名称" prop="sub_name"></el-table-column>
           <el-table-column label="课次日期" prop="sub_date"></el-table-column>
           <el-table-column label="操作" min-width="150">
             <template slot-scope="scope">
-              <el-button size="small" @click="handleHomework(scope.$index,scope.row)">查看作业/布置作业</el-button>
+              <el-button size="small" @click="handleHomework(scope.$index,scope.row)">查看/编辑</el-button>
+              <el-button size="small" type="danger" @click="handleSubDel(scope.$index,scope.row)">删除</el-button>
             </template>
           </el-table-column>
         </el-table>
@@ -74,7 +86,7 @@
       <div class="detailDialog-body" v-if="type === 'edit'">
         <label>学员列表</label>
         <el-table :data="detail.student" style="width: 100%" border class="elTable">
-          <el-table-column label="学生" prop="nickName"></el-table-column>
+          <el-table-column label="学生" prop="name"></el-table-column>
           <el-table-column label="性别" prop="gender"></el-table-column>
           <el-table-column label="电话" prop="phone"></el-table-column>
         </el-table>
@@ -84,23 +96,30 @@
         </div>
       </div>
     </el-dialog>
-    <el-dialog :visible.sync="homeworkDialogVisible" width="740px" title="课次作业">
-      <div>
-        <p>课次名称: {{homework.sub_name}}</p>
-        <p>课次时间: {{homework.sub_date}}</p>
-        <label>作业内容:</label>
-        <div class="detailDialog-body-homework" v-if="!homework.sub_work">
-          <vue-ueditor-wrap v-model="work" :config="myConfig"></vue-ueditor-wrap>
-          <p class="button_right"><el-button type="primary">布置作业</el-button></p>
+    <el-dialog :visible.sync="homeworkDialogVisible" width="740px" title="课次">
+      <div class="detailDialog-header">
+        <p><label>课次名称: </label><el-input v-model="homework.sub_name"></el-input></p>
+        <p><label>课次时间:</label>
+          <el-date-picker
+          v-model="homework.sub_date"
+          type="date"
+          value-format="yyyy-MM-dd"
+          placeholder="选择日期">
+        </el-date-picker>
+        </p>
+        <div class="detailDialog-body">
+          <label>作业内容:</label>
+          <div class="detailDialog-body-homework">
+            <vue-ueditor-wrap v-model="homework.sub_work" :config="myConfig"></vue-ueditor-wrap>
+          </div>
         </div>
-        <p v-if="homework.sub_work">{{homework.sub_work}}</p>
+        <p class="button_right"><el-button type="primary" style="margin-top: 8px;" @click="saveSubCourse()">保存</el-button></p>
       </div>
-      <div class="detailDialog-body">
+      <div class="detailDialog-body" v-if="homeworkDialogType === 'edit'">
         <label>学员作业</label>
-        <el-table :data="detail.student" style="width: 100%" border class="elTable">
-          <el-table-column label="学生" prop="nickName"></el-table-column>
-          <el-table-column label="电话" prop="phone"></el-table-column>
-          <el-table-column label="提交时间" prop="gender"></el-table-column>
+        <el-table :data="homework.work" style="width: 100%" border class="elTable">
+          <el-table-column label="学生" prop="name"></el-table-column>
+          <el-table-column label="提交时间" prop="handle_time"></el-table-column>
           <el-table-column label="操作" min-width="150">
             <template slot-scope="scope">
               <el-button size="small" type="primary" @click="handleDownload(scope.$index,scope.row)">下载</el-button>
@@ -149,11 +168,13 @@
         homeworkDialogVisible: false,
         work: '',
         type: 'add',
+        homeworkDialogType: 'edit',
         cate_options: {},
         teacher_options: [],
-        time_value: [],
+        time_value: [new Date(), new Date()],
         value: 2,
-        sub_course: []
+        sub_course: [],
+        editHomework: true
       }
     },
     created: function () {
@@ -163,41 +184,137 @@
       handleDownload() {
 
       },
-      handleHomework() {
+      handleHomework(index, row) {
         this.homeworkDialogVisible = true;
+        this.homeworkDialogType = 'edit';
+        this.homework = row;
+        this.getHomeworkList(row.id);
+      },
+      handleAddSubCourse() {
+        this.homeworkDialogVisible = true;
+        this.homeworkDialogType = 'add';
+        this.homework = {};
+        this.homework.course_id = this.detail.id;
       },
       handleAdd() {
+        this.detail = {};
         this.detailDialogVisible = true;
         this.type = 'add';
+        this.getTeacher();
+        this.getCate();
       },
       async handleDetail(index,row){
+        this.detail = JSON.parse(JSON.stringify(this.dataTable[index]));
         await this.getCate();
         await this.getTeacher();
         await this.getSubCourse(this.dataTable[index].id);
-        let {start_time, end_time} = this.dataTable[index];
-        let [sh = 0, sm = 0, ss = 0] = start_time ? start_time.split(':') : [];
-        let [eh = 0, em = 0, es = 0] = end_time ? end_time.split(':') : [sh, sm, ss];
-        let time_value = [new Date(2016, 9, 10, sh, sm), new Date(2016, 9, 10, eh, em)];
-        this.detail = JSON.parse(JSON.stringify(this.dataTable[index]));
-        this.time_value = time_value;
+        await this.getStudent(row.id);
         this.detailDialogVisible = true;
         this.type = 'edit';
       },
-      handleDel() {
-
+      async handleDel(index, row) {
+        const resp = await this.$axios.post('/api/public/deleteCourse',{course_id: row.id});
+        const value = resp.data;
+        if(value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          this.getCourseList();
+        }else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
       },
-      saveCourse() {
-        console.log(this.detail);
-        console.log(this.time_value);
+      async handleSubDel(index, row) {
+        const resp = await this.$axios.post('/api/public/deleteSubCourse',{subcourse_id: row.id});
+        const value = resp.data;
+        if(value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          this.getSubCourse(this.detail.id);
+        }else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
       },
-      search() {
-
+      async saveCourse() {
+        let resp;
+        if(this.type === 'add') {
+          this.detail.cate_id = this.detail.cate_id[1];
+          resp = await this.$axios.post('/api/public/addCourse', this.detail);
+        } else if (this.type === 'edit') {
+          this.detail.course_id = this.detail.id;
+          resp = await this.$axios.post('/api/public/changeCourse', this.detail);
+        }
+          const value = resp.data;
+          if(value && value.code === 1){
+            this.$message({
+              message: value.msg,
+              type: 'success'
+            });
+            if(this.type === 'add') {
+              this.detailDialogVisible = false;
+              this.getCourseList();
+            }
+          } else {
+            this.$message({
+              message: value.msg,
+              type: 'danger'
+            });
+          }
+      },
+      async saveSubCourse() {
+        let resp;
+        if(this.homeworkDialogType === 'add') {
+          resp = await this.$axios.post('/api/public/addSubCourse', this.homework);
+        }else  if(this.homeworkDialogType === 'edit') {
+          this.homework.subcourse_id = this.homework.id;
+          resp = await this.$axios.post('/api/public/changeSubCourse', this.homework);
+        }
+        const value = resp.data;
+        if(value && value.code === 1){
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          if(this.homeworkDialogType === 'add') {
+            this.homeworkDialogVisible = false;
+            this.getSubCourse(this.homework.course_id);
+          }
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
+      },
+      async search() {
+        const resp = await this.$axios.get('/api/public/searchCourse?search=' + this.select_word);
+        const value = resp.data;
+        if(value) {
+          value.forEach(item => {
+            item.time = item.start_time + '-' + item.end_time;
+          });
+          this.dataTable = value;
+        }
       },
       handleCurrentChange() {
 
       },
       handleChange() {
 
+      },
+      async getHomeworkList(id) {
+        const resp = await this.$axios.get('/api/public/getWorkList?subcourse_id=' + id);
+        const value = resp.data;
+        this.homework.work = value;
       },
       async getCourseList() {
         let res = await axios.get('/api/public/courseList');
@@ -222,6 +339,11 @@
           }
         }
         this.cate_options = grade;
+      },
+      async getStudent(id) {
+        const resp = await this.$axios.get('/api/public/studentList?course_id=' + id);
+        const value = resp.data;
+        this.detail.student = value;
       },
       async getTeacher() {
         let res = await axios.get('/api/public/teacherList');
