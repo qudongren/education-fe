@@ -1,4 +1,4 @@
-<template>
+s<template>
   <div class="my-info">
     <div class="info-bar">
       <label class="info-bar-title">个人资料</label>
@@ -15,6 +15,15 @@
             <span class="info-text-input" v-if="info.phoneUpdate">
                 <el-input type="text" v-model="info.phone"></el-input>
                 <el-button type="primary" @click="clickComform('phoneUpdate')">确认</el-button>
+            </span>
+          </p>
+          <p class="info-text">标签:
+            <span v-if="!info.tagsUpdate">{{info.tags}}
+              <span class="info-text-update" @click="clickUpdate('tagsUpdate', true)">修改</span>
+            </span>
+            <span class="info-text-input" v-if="info.tagsUpdate">
+              <el-input type="text" v-model="info.tags"></el-input>
+              <el-button type="primary" @click="clickComform('tagsUpdate')">确认</el-button>
             </span>
           </p>
           <p class="info-text">个人简介:
@@ -35,10 +44,11 @@
       <div class="info-bar-content">
         <p class="info-text">
           <el-button type="primary" v-if="!info.pwdUpdate" @click="clickUpdate('pwdUpdate', true)">密码修改</el-button>
-          <span class="info-text-input" v-if="info.pwdUpdate">
-              <el-input type="text" v-model="info.password" placeholder="请输入新密码"></el-input>
+          <div class="detailDialog-header" v-if="info.pwdUpdate">
+              <p><el-input type="text" v-model="info.oldWord" placeholder="请输入旧密码"></el-input></p>
+              <p><el-input type="text" v-model="info.password" placeholder="请输入新密码"></el-input></p>
               <el-button type="primary" @click="clickComform('pwdUpdate')">确认</el-button>
-          </span>
+          </div>
         </p>
       </div>
     </div>
@@ -60,8 +70,26 @@
       clickUpdate(property, bool) {
         this.$set(this.info, property, bool);
       },
-      clickComform(property) {
-        this.clickUpdate(property, false);
+      async clickComform(property) {
+        let resp;
+        if (property === 'pwdUpdate') {
+          resp = await this.$axios.post('/api/public/changePassword', this.info);
+        }else {
+          resp = await this.$axios.post('/api/public/changeOwn', this.info);
+        }
+        const value = resp.data;
+        if(value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          this.clickUpdate(property, false);
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
       }
     }
   };

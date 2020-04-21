@@ -27,11 +27,14 @@
     <el-dialog :visible.sync="detailDialogVisible" width="740px" title="教师详情">
       <div class="detailDialog-header">
         <p><label>姓名：</label><el-input v-model="detail.name"></el-input> </p>
-        <p><label>性别：</label><el-input v-model="detail.gender"></el-input></p>
+        <p><label>性别：</label>
+          <el-radio v-model="detail.gender" label="男">男</el-radio>
+          <el-radio v-model="detail.gender" label="女">女</el-radio>
+        </p>
         <p><label>电话：</label><el-input v-model="detail.phone"></el-input></p>
         <p><label>标签：</label><el-input v-model="detail.tags"></el-input></p>
         <p><label>简介：</label><el-input v-model="detail.introduce"></el-input></p>
-        <p class="button_right"><el-button type="primary" style="margin-top: 8px;">保存</el-button></p>
+        <p class="button_right"><el-button type="primary" @click="handleSave" style="margin-top: 8px;">保存</el-button></p>
       </div>
       <div class="detailDialog-body" v-if="type === 'edit'">
         <label>课程列表</label>
@@ -39,7 +42,7 @@
           <el-table-column label="课程名称" prop="cName"></el-table-column>
           <el-table-column label="年级" prop="grade_dec"></el-table-column>
           <el-table-column label="学科" prop="subject_dec"></el-table-column>
-          <el-table-column label="课程时间" prop="time"></el-table-column>
+          <el-table-column label="课程时间" prop="time" min-width="150"></el-table-column>
           <el-table-column label="课程价格" prop="price"></el-table-column>
           <el-table-column label="总名额" prop="total"></el-table-column>
           <el-table-column label="已算名额" prop="nowNum"></el-table-column>
@@ -67,21 +70,81 @@
       }
     },
     methods: {
+      async handleDel(index, row) {
+        const resp = await this.$axios.post('/api/public/deleteTeacher',{teacher_id: row.id});
+        const value = resp.data;
+        if(value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          this.getTeacherList();
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
+      },
+      async handleSave() {
+        let resp;
+        if(this.type === 'add') {
+          resp = await this.$axios.post('/api/public/addTeacher', this.detail);
+        } else if (this.type === 'edit') {
+          this.detail.teacher_id = this.detail.id;
+          resp = await this.$axios.post('/api/public/changeTeacher', this.detail);
+        }
+        const value = resp.data;
+        if(value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+          this.detailDialogVisible = false;
+          this.getTeacherList();
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
+      },
       handleAdd() {
         this.detailDialogVisible = true;
         this.type = 'add';
+        this.detail = {};
       },
-      handleDetail(index,row){
+      async handleDetail(index,row){
         this.detail = this.dataTable[index];
+        await this.getCourseList(row.id);
         this.detailDialogVisible = true;
       },
-      search() {
-
+      async search() {
+        const resp = await this.$axios.get('/api/public/searchTeacher',{params:{search: this.select_word}});
+        const value = resp.data;
+        if(value ) {
+          this.dataTable = value;
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
       },
       handleCurrentChange() {
 
       },
-      async init() {
+      async getCourseList(id) {
+        const resp = await this.$axios.get('/api/public/getCourseOfTeacher',{params:{teacher_id: id}});
+        const value = resp.data;
+        if(value) {
+          value.forEach(item => {
+            item.time = item.start_time + '-' + item.end_time;
+          });
+          this.detail.course = value;
+        }
+      },
+      async getTeacherList() {
         const resp = await this.$axios.get('/api/public/teacherList');
         const value = resp.data;
         if(value) {
@@ -90,7 +153,7 @@
       }
     },
     created() {
-      this.init();
+      this.getTeacherList();
     }
   };
 </script>

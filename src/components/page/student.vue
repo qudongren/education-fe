@@ -8,12 +8,10 @@
       </div>
       <el-table :data="dataTable" ref="multipleTable" style="width: 100%" v-loading="loading" border
                 class="elTable">
-        <el-table-column label="姓名" prop="nickName"></el-table-column>
-        <el-table-column label="性别" prop="genderText"></el-table-column>
+        <el-table-column label="姓名" prop="name"></el-table-column>
+        <el-table-column label="性别" prop="gender"></el-table-column>
         <el-table-column label="电话" prop="phone"></el-table-column>
-        <el-table-column label="国家" prop="country"></el-table-column>
-        <el-table-column label="省份" prop="province"></el-table-column>
-        <el-table-column label="城市" prop="city"></el-table-column>
+        <el-table-column label="生日" prop="birthday"></el-table-column>
         <el-table-column label="操作" min-width="150">
           <template slot-scope="scope">
             <el-button type="primary" size="small" @click="handleDetail(scope.$index,scope.row)">查看/编辑</el-button>
@@ -29,13 +27,21 @@
     </div>
     <el-dialog :visible.sync="detailDialogVisible" width="740px" title="学员详情">
       <div class="detailDialog-header">
-        <p><label>姓名：</label><el-input v-model="detail.nickName"></el-input> </p>
-        <p><label>性别：</label><el-input v-model="detail.genderText"></el-input></p>
+        <p><label>姓名：</label><el-input v-model="detail.name"></el-input> </p>
+        <p><label>性别：</label>
+          <el-radio v-model="detail.gender" label="男">男</el-radio>
+          <el-radio v-model="detail.gender" label="女">女</el-radio>
+        </p>
         <p><label>电话：</label><el-input v-model="detail.phone"></el-input></p>
-        <p><label>国家：</label><el-input v-model="detail.country"></el-input></p>
-        <p><label>省份：</label><el-input v-model="detail.province"></el-input></p>
-        <p><label>城市：</label><el-input v-model="detail.city"></el-input></p>
-        <p class="button_right"><el-button type="primary" style="margin-top: 8px;">保存</el-button></p>
+        <p><label>生日：</label>
+          <el-date-picker
+            v-model="detail.birthday"
+            type="date"
+            value-format="yyyy-MM-dd"
+            placeholder="选择日期">
+          </el-date-picker>
+        </p>
+        <p class="button_right"><el-button type="primary" @click="handleSave" style="margin-top: 8px;">保存</el-button></p>
       </div>
     </el-dialog>
   </div>
@@ -60,6 +66,22 @@
       }
     },
     methods: {
+      async handleSave() {
+        this.detail.student_id = this.detail.id;
+        const resp = await this.$axios.post('/api/public/changeStudent', this.detail);
+        const value = resp.data;
+        if (value && value.code === 1) {
+          this.$message({
+            message: value.msg,
+            type: 'success'
+          });
+        } else {
+          this.$message({
+            message: value.msg,
+            type: 'danger'
+          });
+        }
+      },
       handleDetail(index,row){
         this.detail = this.dataTable[index];
         this.detailDialogVisible = true;
@@ -69,7 +91,17 @@
       },
       handleCurrentChange() {
 
+      },
+      async getStudentList() {
+        const resp = await this.$axios.get('/api/public/getAllStudent');
+        const value = resp.data;
+        if (value) {
+          this.dataTable = value;
+        }
       }
+    },
+    created() {
+      this.getStudentList();
     }
   };
 </script>
